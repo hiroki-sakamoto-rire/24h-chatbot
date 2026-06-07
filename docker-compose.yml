@@ -1,0 +1,19 @@
+# ローカル開発用の PostgreSQL (pgvector 入り)。
+# 起動: docker compose up -d
+# 接続: postgresql://postgres:postgres@localhost:5432/chatbot?schema=public
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: chatbot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chatbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - chatbot_db_data:/var/lib/postgresql/data
+
+volumes:
+  chatbot_db_data:
