@@ -22,11 +22,28 @@ enum ProcessStatus {
   FAILED
 }
 
+/// クライアント(テナント)。ボットをクライアントごとに分離するための単位。
+/// データはすべて clientId で分離し、各クライアントのボットは自社分のみを参照する。
+model Client {
+  id          String   @id @default(cuid())
+  name        String // 表示名 (例: Client A)
+  slug        String   @unique // 一意キー (例: clienta)
+  nameTag     String?  @unique // Zoom会議名のタグ (例: ClientA → 【ClientA】... で判定)
+  accessToken String   @unique @default(cuid()) // 将来の専用URLアクセス用トークン
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  meetings      Meeting[]
+  conversations Conversation[]
+
+  @@map("clients")
+}
+
 /// Zoom会議 (tl;dv 経由で取り込む) を表すモデル。
 /// Zoom会議名(name) と GCP内の録画ファイル(recordingGcsPath) を紐付けて保持する。
 model Meeting {
-  id            String        @id @default(cuid())
-  tldvMeetingId String        @unique // tl;dv の meetingId。重複保存防止の一意キー
+  id            String         @id @default(cuid())
+  tldvMeetingId String         @unique // tl;dv の meetingId。重複保存防止の一意キー
   name          String // 元のZoom会議名(人間用・検索用)
   happenedAt    DateTime? // 会議の実施日時
   durationSec   Int? // 会議の長さ(秒)
@@ -35,6 +52,10 @@ model Meeting {
   organizerName String?
   organizerEmail String?
   invitees      Json? // 参加者一覧
+
+  // クライアント分離 (会議名のタグから判定。未判定は null = どのクライアントにも公開しない)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
 
   // 録画 (GCSに保存)
   recordingGcsPath String? // 例: gs://bucket/recordings/2026/06/07/2026-06-07_営業定例_xxxx.mp4
@@ -47,16 +68,20 @@ model Meeting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([clientId])
   @@map("meetings")
 }
 
 model Conversation {
   id        String    @id @default(cuid())
   title     String?
+  clientId  String? // どのクライアントのボットでの会話か
+  client    Client?   @relation(fields: [clientId], references: [id])
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   messages  Message[]
 
+  @@index([clientId])
   @@map("conversations")
 }
 

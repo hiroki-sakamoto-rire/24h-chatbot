@@ -7,6 +7,7 @@ import {
   type TldvMeeting,
 } from "@/lib/tldv";
 import { buildRecordingObjectName } from "@/lib/naming";
+import { resolveClientIdFromMeetingName } from "@/lib/clientMatching";
 
 // 録画ダウンロード等で時間がかかるため、Node.js ランタイムで実行する。
 export const runtime = "nodejs";
@@ -77,6 +78,9 @@ export async function POST(request: NextRequest) {
 async function handleMeetingReady(meeting: TldvMeeting): Promise<void> {
   const happenedAt = meeting.happenedAt ? new Date(meeting.happenedAt) : null;
 
+  // 会議名のタグ(例:【ClientA】)からクライアントを判定。未判定は null = 非公開扱い
+  const clientId = await resolveClientIdFromMeetingName(meeting.name);
+
   // tldvMeetingId を一意キーに upsert することで Webhook 再送時の二重保存を防ぐ
   await prisma.meeting.upsert({
     where: { tldvMeetingId: meeting.id },
@@ -90,6 +94,7 @@ async function handleMeetingReady(meeting: TldvMeeting): Promise<void> {
       organizerName: meeting.organizer?.name ?? null,
       organizerEmail: meeting.organizer?.email ?? null,
       invitees: meeting.invitees ?? undefined,
+      clientId,
     },
     update: {
       name: meeting.name,
@@ -100,6 +105,7 @@ async function handleMeetingReady(meeting: TldvMeeting): Promise<void> {
       organizerName: meeting.organizer?.name ?? null,
       organizerEmail: meeting.organizer?.email ?? null,
       invitees: meeting.invitees ?? undefined,
+      clientId,
     },
   });
 
