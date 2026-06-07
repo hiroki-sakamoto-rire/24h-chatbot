@@ -16,6 +16,40 @@ enum Role {
   SYSTEM
 }
 
+enum ProcessStatus {
+  PENDING
+  STORED
+  FAILED
+}
+
+/// Zoom会議 (tl;dv 経由で取り込む) を表すモデル。
+/// Zoom会議名(name) と GCP内の録画ファイル(recordingGcsPath) を紐付けて保持する。
+model Meeting {
+  id            String        @id @default(cuid())
+  tldvMeetingId String        @unique // tl;dv の meetingId。重複保存防止の一意キー
+  name          String // 元のZoom会議名(人間用・検索用)
+  happenedAt    DateTime? // 会議の実施日時
+  durationSec   Int? // 会議の長さ(秒)
+  tldvUrl       String? // tl;dv 上のURL
+  conferenceId  String? // Zoom等の会議ID (extraProperties.conferenceId)
+  organizerName String?
+  organizerEmail String?
+  invitees      Json? // 参加者一覧
+
+  // 録画 (GCSに保存)
+  recordingGcsPath String? // 例: gs://bucket/recordings/2026/06/07/2026-06-07_営業定例_xxxx.mp4
+  recordingStatus  ProcessStatus @default(PENDING)
+
+  // 文字起こし
+  transcript       String?       @db.Text
+  transcriptStatus ProcessStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("meetings")
+}
+
 model Conversation {
   id        String    @id @default(cuid())
   title     String?
