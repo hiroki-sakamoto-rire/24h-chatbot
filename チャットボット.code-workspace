@@ -1,0 +1,19 @@
+{
+  "folders": [
+    {
+      "name": "💬 24時間対応のチャットボット",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.next": true,
+      "**/node_modules": true
+    },
+    "search.exclude": {
+      "**/.next": true,
+      "**/node_modules": true,
+      "**/package-lock.json": true
+    }
+  }
+}

@@ -68,8 +68,30 @@ model Meeting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  chunks MeetingChunk[]
+
   @@index([clientId])
   @@map("meetings")
+}
+
+/// 文字起こしを検索可能な単位(チャンク)に分割し、埋め込みベクトルを保持する。
+/// RAG(類似検索)で使う。clientId でテナント分離する。
+model MeetingChunk {
+  id         String   @id @default(cuid())
+  meetingId  String
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  clientId   String? // 検索時の絞り込み用(Meeting.clientId のコピー)
+  chunkIndex Int
+  content    String   @db.Text
+
+  // OpenAI text-embedding-3-small の次元数(1536)。pgvector の vector 型。
+  embedding Unsupported("vector(1536)")?
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId])
+  @@index([meetingId])
+  @@map("meeting_chunks")
 }
 
 model Conversation {

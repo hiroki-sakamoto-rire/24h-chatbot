@@ -8,6 +8,7 @@ import {
 } from "@/lib/tldv";
 import { buildRecordingObjectName } from "@/lib/naming";
 import { resolveClientIdFromMeetingName } from "@/lib/clientMatching";
+import { indexMeetingTranscript } from "@/lib/rag";
 
 // 録画ダウンロード等で時間がかかるため、Node.js ランタイムで実行する。
 export const runtime = "nodejs";
@@ -155,7 +156,7 @@ async function handleTranscriptReady(
   }
 
   // 文字起こしが先に届くケースに備え upsert
-  await prisma.meeting.upsert({
+  const meeting = await prisma.meeting.upsert({
     where: { tldvMeetingId: meetingId },
     create: {
       tldvMeetingId: meetingId,
@@ -167,7 +168,10 @@ async function handleTranscriptReady(
       transcript: text,
       transcriptStatus: "STORED",
     },
+    select: { id: true },
   });
 
-  // TODO: ここで文字起こしをチャンク化し、embedding を生成して pgvector に格納(RAG)
+  // 文字起こしをチャンク化・埋め込みして pgvector に格納(RAG用)
+  const count = await indexMeetingTranscript(meeting.id);
+  console.log(`[tldv webhook] meeting=${meeting.id} を ${count} チャンクでインデックス化`);
 }
